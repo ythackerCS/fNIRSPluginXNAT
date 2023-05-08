@@ -1,3 +1,0 @@
-<!-- BEGIN /templates/screens/pixi_bliSessionData/edit/validate.vm -->
-#parse($turbineUtils.getTemplateName("validate.vm","xnat:imageSessionData",$project,"edit"))
-<!-- END /templates/screens/pixi_bliSessionData/edit/validate.vm -->

@@ -1,3 +1,0 @@
-<!-- BEGIN pixi-plugin templates/screens/XDATScreen_edit_pixi_bliSessionData.vm -->
-#parse($turbineUtils.getTemplateName("edit",$om.getXSIType(),$project,"edit"))
-<!-- BEGIN pixi-plugin templates/screens/XDATScreen_edit_pixi_bliSessionData.vm -->

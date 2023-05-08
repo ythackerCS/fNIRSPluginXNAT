@@ -1,8 +1,0 @@
-<!-- BEGIN quick_search/plugins/post/QuickSearchPixiSubject.vm -->
-
-<script src="$content.getURI("/scripts/xnat/plugin/pixi/pixi-module.js")"></script>
-<script src="$content.getURI("/scripts/xnat/plugin/pixi/pixi-speciesPreferences.js")"></script>
-<script src="$content.getURI("/scripts/xnat/plugin/pixi/pixi-demographicDataPreference.js")"></script>
-<script src="$content.getURI("/scripts/xnat/plugin/pixi/pixi-quick-search.js")"></script>
-
-<!-- END quick_search/plugins/post/QuickSearchPixiSubject.vm -->

@@ -1,6 +1,6 @@
-<!-- BEGIN pixi-plugin templates/screens/UploadBli.vm -->
+<!-- BEGIN fnirs-plugin templates/screens/UploadBli.vm -->
 <div>
-    <h2>PIXI Bioluminescent Imaging Uploader</h2>
+    <h2>fNIRS Scan Imaging Uploader</h2>
 
     <p>Upload zipped (.zip) bioluminescent imaging sessions to a specified project.</p>
 
@@ -49,7 +49,7 @@
     }
 </style>
 
-<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-projects.js')"></script>
+<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/fnirs/fnirs-projects.js')"></script>
 
 <script type="text/javascript">
 
@@ -62,7 +62,7 @@
 
     // Load projects then render project select box
     let projects;
-    XNAT.plugin.pixi.projects.getAll().then(resultSet => resultSet['ResultSet']['Result'])
+    XNAT.plugin.fnirs.projects.getAll().then(resultSet => resultSet['ResultSet']['Result'])
                                       .then(prjs => {
                                           projects = prjs;
                                           renderProjectSelectBox(projectEl, prjs);
@@ -206,4 +206,4 @@
     }
 </script>
 
-<!-- END pixi-plugin templates/screens/UploadBli.vm -->
+<!-- END fnirs-plugin templates/screens/UploadBli.vm -->

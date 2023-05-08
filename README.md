@@ -1,2 +1,2 @@
-# PIXI
-Preclinical Imaging XNAT-enabled Informatics
+# fNIRS
+fNIRS Imaging XNAT-enabled Informatics
