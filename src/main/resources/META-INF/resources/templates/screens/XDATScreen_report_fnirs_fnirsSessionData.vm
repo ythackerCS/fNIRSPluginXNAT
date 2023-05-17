@@ -1,0 +1,81 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2//EN">
+$page.setTitle("fnirsSession Details")
+$page.setLinkColor($ui.alink)
+$page.setVlinkColor($ui.vlink)
+#if ($turbineUtils.GetPassedParameter("popup", $data))
+	#set ($popup = $turbineUtils.GetPassedParameter("popup", data) )
+	#set ($popup = "false")
+#end
+<TABLE width="100%">
+	<TR>
+		<TD>
+			<table width="100%">
+				<TR>
+					<TD align="left" valign="middle">
+						<font face="$ui.sansSerifFonts" size="3"><b>fnirsSession Details</b></font>
+					</TD>
+				</TR>
+			</TABLE>
+		</TD>
+	</TR>
+	<TR>
+		<TD>
+			<TABLE width="100%">
+				<TR>
+					<TD valign="top">
+						<TABLE>
+							<TR><TD>UID</TD><TD>#xdatStringBox("fnirs:fnirsSessionData/UID" $item "" $vr)</TD></TR>
+							<TR><TD>study_id</TD><TD>#xdatStringBox("fnirs:fnirsSessionData/study_id" $item "" $vr)</TD></TR>
+							<TR><TD>task</TD><TD>#xdatTextBox("fnirs:fnirsSessionData/task" $item "" $vr)</TD></TR>
+							<TR><TD>age</TD><TD>#xdatTextBox("fnirs:fnirsSessionData/age" $item "" $vr)</TD></TR>
+							<TR><TD>date</TD><TD>#xdatDateBox("fnirs:fnirsSessionData/date" $item $vr $years)</TD></TR>
+							<TR><TD>time</TD><TD>#xdatTextBox("fnirs:fnirsSessionData/time" $item "" $vr)</TD></TR>
+							<TR><TD>note</TD><TD>#xdatStringBox("fnirs:fnirsSessionData/note" $item "" $vr)</TD></TR>
+							<TR><TD>acquisition_site</TD><TD>#xdatStringBox("fnirs:fnirsSessionData/acquisition_site" $item "" $vr)</TD></TR>
+							<TR><TD>visit_id</TD><TD>#xdatStringBox("fnirs:fnirsSessionData/visit_id" $item "" $vr)</TD></TR>
+							<TR><TD>visit</TD><TD>#xdatStringBox("fnirs:fnirsSessionData/visit" $item "" $vr)</TD></TR>
+							<TR><TD>visit</TD><TD>#xdatStringBox("fnirs:fnirsSessionData/visit" $item "" $vr)</TD></TR>
+							<label for="scanData"> ScanData </label>
+							<TR><TD>Scan Files  <input type="file" id="scanData"> </TD></TR>
+							<label for="additionalInfo"> Func Files </label>
+							<TR><TD>Additional Functional Files <input type="file" id="additionalInfo"> </TD></TR>
+						</TABLE>
+					</TD>
+					<TD valign="top" align="right">
+						#parse($turbineUtils.getTemplateName("actions",$om.getXSIType(),$project))
+					</TD>
+				</TR>
+			</TABLE>
+		</TD>
+	</TR>
+
+	<script>
+		let scanDataFiles = document.getElementById("scanData").files
+		let funcDataFiles = document.getElementById("additionalInfo").files
+		let project = document.getElementById("fnirs:fnirsSessionData/project").value
+		let subject = document.getElementById("subject_id").value
+		let scan = document.getElementById("")
+
+		function uploadScanData() {
+			let data = new FormData()
+
+			let fetchURL = `/data/projects/${project}/${subject}/`
+			data.append("scanData", scanDataFiles);
+			const ScanDataresponse = fetch(fetchURL, {
+				method: 'PUT',
+				body: data
+			})
+
+			fetchURL = `/data/projects/${project}/${subject}/`
+			data.append('additionalInfo', funcDataFiles)
+			const FuncDataresponse = fetch(fetchURL, {
+				method: 'PUT',
+				body: data
+			})
+
+			alert('The file has been uploaded successfully.');
+		}
+
+	</script>
+<!-- END fnirs:fnirsSessionData -->
+</TABLE><BR>#parse("/screens/ReportProjectSpecificFields.vm")

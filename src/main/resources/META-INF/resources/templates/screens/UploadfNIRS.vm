@@ -1,4 +1,4 @@
-<!-- BEGIN fnirs-plugin templates/screens/UploadBli.vm -->
+<!-- BEGIN fnirs-plugin templates/screens/UploadfNIRS.vm -->
 <div>
     <h2>fNIRS Scan Imaging Uploader</h2>
 
@@ -49,7 +49,7 @@
     }
 </style>
 
-<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/fnirs/fnirs-projects.js')"></script>
+##<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/fnirs/fnirs-projects.js')"></script>
 
 <script type="text/javascript">
 
@@ -62,11 +62,15 @@
 
     // Load projects then render project select box
     let projects;
-    XNAT.plugin.fnirs.projects.getAll().then(resultSet => resultSet['ResultSet']['Result'])
-                                      .then(prjs => {
-                                          projects = prjs;
-                                          renderProjectSelectBox(projectEl, prjs);
-                                      });
+    //TODO: CHANGE XNAT.plugins.fnirs.projects.getProjects() = await fetch (GET project data)
+    //await fetch(XNAT.url.csrfUrl("CHANGE URL"), { (COULD ALSO BE restURL)
+    // method: 'POST',
+    // })
+    // XNAT.plugin.fnirs.projects.getAll().then(resultSet => resultSet['ResultSet']['Result'])
+    //                                   .then(prjs => {
+    //                                       projects = prjs;
+    //                                       renderProjectSelectBox(projectEl, prjs);
+    //                                   });
 
     let renderProjectSelectBox = function(selectBox, projects) {
         console.debug('renderProjectSelectBox()')
@@ -151,7 +155,7 @@
         }
 
         let importServiceUrl = XNAT.url.csrfUrl('/data/services/import');
-        importServiceUrl = XNAT.url.addQueryString(importServiceUrl, ['import-handler=BLI',
+        importServiceUrl = XNAT.url.addQueryString(importServiceUrl, ['import-handler=fNIRS',
                                                                       `PROJECT_ID=${projectId}`,
                                                                       `src=${encodedCachePath}`]);
 
@@ -206,4 +210,4 @@
     }
 </script>
 
-<!-- END fnirs-plugin templates/screens/UploadBli.vm -->
+<!-- END fnirs-plugin templates/screens/UploadfNIRS.vm -->

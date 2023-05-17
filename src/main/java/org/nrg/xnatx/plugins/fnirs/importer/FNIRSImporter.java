@@ -12,6 +12,7 @@ import org.nrg.xdat.om.ArcProject;
 import org.nrg.xdat.om.XnatProjectdata;
 import org.nrg.xft.security.UserI;
 import org.nrg.xft.utils.fileExtraction.Format;
+import org.nrg.xnat.helpers.ZipEntryFileWriterWrapper;
 import org.nrg.xnat.helpers.prearchive.PrearcDatabase;
 import org.nrg.xnat.helpers.prearchive.PrearcUtils;
 import org.nrg.xnat.helpers.prearchive.SessionData;
@@ -182,9 +183,16 @@ public class FNIRSImporter extends ImporterHandlerA {
 
             Files.createFile(prearchiveFile);
 
+            // AnalyzedClickInfo.txt is the header file and contains all session metadata
+            // Other file can be directly saved to the prearchive
+            ZipEntryFileWriterWrapper zipEntryFileWriterWrapper = new ZipEntryFileWriterWrapper(ze,zin);
+            zipEntryFileWriterWrapper.write(prearchiveFile.toFile());
+
             ze = zin.getNextEntry();
         }
-
+//    if (params.containsKey("src")) {
+//        protected ZipEntry importDirectory(final String projectId, ZipEntry ze, ZipInputStream zin) throws IOException, ServerException, ClientException
+//    }
 
 //TODO: DEFINE THESEEEE USE THE JSON
 //            scanDate =
