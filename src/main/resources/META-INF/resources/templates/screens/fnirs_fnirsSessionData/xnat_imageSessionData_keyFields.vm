@@ -45,4 +45,10 @@
 </tr>
 #end
 
+#if($!item.getProperty("task"))
+<tr>
+    <th align="left">Acquisition Site:</th>
+    <td>#escapeCleanHTML($!item.getProperty("task"))</td>
+</tr>
+#end
 <!--END xnat_imageSessionData_keyFields.vm -->

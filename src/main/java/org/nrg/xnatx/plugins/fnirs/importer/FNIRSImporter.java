@@ -3,26 +3,39 @@ package org.nrg.xnatx.plugins.fnirs.importer;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
 import org.nrg.action.ClientException;
 import org.nrg.action.ServerException;
 import org.nrg.framework.constants.PrearchiveCode;
 import org.nrg.xdat.XDAT;
+import org.nrg.xdat.bean.CatCatalogBean;
+import org.nrg.xdat.bean.XnatResourcecatalogBean;
 import org.nrg.xdat.om.ArcProject;
 import org.nrg.xdat.om.XnatProjectdata;
+import org.nrg.xdat.om.XnatResourcecatalog;
+import org.nrg.xdat.om.XnatSubjectdata;
+import org.nrg.xft.event.EventMetaI;
+import org.nrg.xft.event.EventUtils;
+import org.nrg.xft.event.persist.PersistentWorkflowI;
+import org.nrg.xft.event.persist.PersistentWorkflowUtils;
 import org.nrg.xft.security.UserI;
+import org.nrg.xft.utils.ResourceFile;
+import org.nrg.xft.utils.SaveItemHelper;
 import org.nrg.xft.utils.fileExtraction.Format;
+import org.nrg.xnat.eventservice.services.SubscriptionDeliveryEntityService;
 import org.nrg.xnat.helpers.ZipEntryFileWriterWrapper;
 import org.nrg.xnat.helpers.prearchive.PrearcDatabase;
 import org.nrg.xnat.helpers.prearchive.PrearcUtils;
 import org.nrg.xnat.helpers.prearchive.SessionData;
 import org.nrg.xnat.helpers.uri.URIManager;
+import org.nrg.xnat.helpers.uri.UriParserUtils;
 import org.nrg.xnat.restlet.actions.importer.ImporterHandler;
 import org.nrg.xnat.restlet.actions.importer.ImporterHandlerA;
 import org.nrg.xnat.restlet.util.FileWriterWrapperI;
+import org.nrg.xnat.services.archive.CatalogService;
 import org.nrg.xnat.services.messaging.prearchive.PrearchiveOperationRequest;
 import org.nrg.xnat.turbine.utils.ArcSpecManager;
-
+import org.nrg.xnat.utils.WorkflowUtils;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,11 +43,16 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.Timestamp;
 import java.util.*;
+import java.util.stream.StreamSupport;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+//import static jdk.tools.jlink.internal.ImageFileCreator.splitPath;
 import static org.nrg.xnat.archive.Operation.Rebuild;
+import static org.nrg.xnat.eventservice.entities.TimedEventStatusEntity.Status.ACTION_COMPLETE;
+import static org.nrg.xnat.eventservice.entities.TimedEventStatusEntity.Status.ACTION_FAILED;
 
 /**
  * An import handler for fNIRS sessions.
@@ -42,10 +60,9 @@ import static org.nrg.xnat.archive.Operation.Rebuild;
  * Supports ZIP uploads of a fNIRS session. Each directory in the folder is assumed to be a single session.
  *
  */
-@ImporterHandler(handler = FNIRSImporter.fNIRS_IMPORTER)
+@ImporterHandler(handler = "fNIRS")
 @Slf4j
 public class FNIRSImporter extends ImporterHandlerA {
-    public static final String fNIRS_IMPORTER = "fNIRS";
     private final InputStream in;
     private final UserI user;
     private final Map<String, Object> params;
@@ -55,6 +72,9 @@ public class FNIRSImporter extends ImporterHandlerA {
     private final Set<Path> timestampDirectories;
     private final Set<SessionData> sessions;
     private static final String UNKNOWN_SESSION_LABEL = "fNIRS_zip_upload";
+    private CatalogService catalogService;
+
+    private SubscriptionDeliveryEntityService subscriptionDeliveryEntityService;
 
     public FNIRSImporter(final Object listenerControl,
                        final UserI user,
@@ -69,6 +89,13 @@ public class FNIRSImporter extends ImporterHandlerA {
         this.uris = Sets.newLinkedHashSet();
         this.timestampDirectories = Sets.newLinkedHashSet();
         this.sessions = Sets.newLinkedHashSet();
+        this.subscriptionDeliveryEntityService = XDAT.getContextService().getBean(SubscriptionDeliveryEntityService.class);
+    }
+
+    public static String[] splitPath(String pathString) {
+        Path path = Paths.get(pathString);
+        return StreamSupport.stream(path.spliterator(), false).map(Path::toString)
+                .toArray(String[]::new);
     }
 
     @Override
@@ -84,25 +111,188 @@ public class FNIRSImporter extends ImporterHandlerA {
 
         // Only accepting ZIP format
         if (format == Format.ZIP) {
-            try (final ZipInputStream zin = new ZipInputStream(in)) {
+            try (final ZipInputStream zis = new ZipInputStream(in)) {
                 log.info("Zip file received by fNIRS importer.");
 
-                ZipEntry ze = zin.getNextEntry();
-                while (null != ze) {
-                    // Each directory contains a single fNIRS session
-                    if (ze.isDirectory()) {
-                        // importDirectory(...) returns the next zip entry
-                        ze = importDirectory(projectId, ze, zin);
+                //read the zip file data
+                ZipEntry zipEntry = zis.getNextEntry();
+                while (null != zipEntry) {
+//                    File newFile = newFile(destDir, zipEntry);
+                    if (zipEntry != null && zipEntry.isDirectory() && zipEntry.getName().contains("sub-")){
+                        if (zipEntry != null && !zipEntry.isDirectory() && zipEntry.getName().contains("params")) {
+                            String[] paths = splitPath(zipEntry.getName());
+                            String subject = paths[paths.length-2];
+                            log.error("params file!!" + zipEntry.getName());
+                            log.error("Create subject" + subject);
+                            log.error("upload Params file" + zipEntry.getName());
+                            //If subject doesnt already exist create a new subject
+                            XnatSubjectdata lookForSubject = XnatSubjectdata.GetSubjectByProjectIdentifier(projectId, subject, user,false);
+                            if (lookForSubject != null) {
+                                createSubject(URIManager.PROJECT_ID, subject);
+                                lookForSubject = XnatSubjectdata.GetSubjectByProjectIdentifier(projectId, subject, user,false);
+                            }
+                            else{
+                                log.error("Adding file to subject data");
+                                String subjectURI = UriParserUtils.getArchiveUri(lookForSubject);
+
+                                XnatResourcecatalog resourcecatalog = null;
+                                try {
+                                    resourcecatalog = catalogService.insertResourceCatalog(user, subjectURI, null);
+                                } catch (Exception e) {
+                                    throw new RuntimeException(e);
+                                }
+
+//                                resourcecatalog.resource
+//                                String createdUri = UriParserUtils.getArchiveUri(resourcecatalog);
+//                                if (StringUtils.isBlank(createdUri)) {
+//                                    createdUri = subjectURI + "/resources/" + resourcecatalog.getLabel();
+//                                }
+//                                File resourceCatalogXml = new File(scanDir.toFile(), "resource_catalog.xml/subjectresource");
+//                                XnatResourcecatalogBean resourceCatalog = new XnatResourcecatalogBean();
+//
+//
+//                                resourceCatalog.setUri(Paths.get("SCANS", id, "params.txt").toString());
+//                                resourceCatalog.setLabel("params.txt");
+//                                resourceCatalog.setFormat("params");
+//                                resourceCatalog.setContent("params");
+//                                resourceCatalog.setDescription("params");
+//
+//                                CatCatalogBean catCatalogBean = new CatCatalogBean();
+//
+//                                Files.list(scanDir)
+//                                        .map(this::createCatalogEntry)
+//                                        .forEach(catCatalogBean::addEntries_entry);
+//
+//                                lookForSubject.addResources_resource(resourceCatalog);
+//
+//                                try (FileWriter resourceCatalogXmlWriter = new FileWriter(resourceCatalogXml)) {
+//                                    catCatalogBean.toXML(resourceCatalogXmlWriter, true);
+//                                } catch (IOException e) {
+//                                    log.error("Unable to write scan catalog", e);
+//                                }
+                            }
+
+                        }
+                        if (zipEntry != null && zipEntry.isDirectory() && zipEntry.getName().contains("ses") && !zipEntry.getName().contains("__MACOSX")){
+                            String[] paths = splitPath(zipEntry.getName());
+                            String session = paths[paths.length-1];
+                            String subject = paths[paths.length-2];
+                            final String timestamp = PrearcUtils.makeTimestamp();
+                            //after entering a session while the session is the same and the subject is the same create the corresponding folders needed in prearchive and copy contents
+                            while (zipEntry != null && zipEntry.getName().contains(session) && zipEntry.getName().contains(subject)) {
+                                if (zipEntry != null && zipEntry.isDirectory() && zipEntry.getName().contains("nirs") && !zipEntry.getName().contains("__MACOSX")) {
+                                    //It is a nirs folder so get subject, session, and scan name details from path
+                                    log.error("nirs directory create scan and push files for dir" + zipEntry.getName());
+                                    paths = splitPath(zipEntry.getName());
+                                    String scanName = paths[paths.length - 2];
+                                    session = paths[paths.length - 3];
+                                    subject = paths[paths.length - 4];
+                                    //Create subject session and prearchive folder to transfer data too
+                                    XnatSubjectdata lookForSubject = XnatSubjectdata.GetSubjectByProjectIdentifier(projectId, subject, user, false);
+                                    String subjectID = null;
+                                    if (lookForSubject != null) {
+                                        subjectID = createSubject(projectId, subject);
+                                    }
+                                    log.error(timestamp);
+                                    Path prearchiveFolderPath = createPreArchiveFolder(projectId, subject, session, scanName, timestamp, Boolean.FALSE);
+                                    createSession(projectId, subject, subjectID, session, scanName, timestamp, prearchiveFolderPath);
+
+                                    //go next into the folder and get the scan files and write the data to the prearchive equavalent file
+                                    zipEntry = zis.getNextEntry();
+                                    //while you dont hit the next folder keep adding files to list of scan files
+                                    while (zipEntry != null && !zipEntry.isDirectory()) {
+                                        //if you see a params folder create the subject and transfer file to subject level file
+                                        if (zipEntry.getName().contains("params") && zipEntry.isDirectory()) {
+                                            log.error("params folder!!" + zipEntry.getName());
+                                            log.error("Create subject" + subject);
+                                            log.error("upload Params file" + zipEntry.getName());
+                                            lookForSubject = XnatSubjectdata.GetSubjectByProjectIdentifier(projectId, subject, user,false);
+                                            if (lookForSubject != null) {
+                                                createSubject(URIManager.PROJECT_ID, subject);
+                                            }
+                                        }
+                                        //otherwise it is scan data, start transfering the files
+                                        else {
+                                            log.error("pushing scan data to subject " + subject + "push data to scan " + scanName + "push data to session " + session);
+                                            // Create file in the prearchive and write file details to the file in prearchive
+                                            String fileName = zipEntry.getName();
+                                            File f = new File(fileName);
+                                            fileName = f.getName();
+                                            Path finalPathForPrearchive = prearchiveFolderPath.resolve(fileName);
+
+                                            if (Files.notExists(finalPathForPrearchive)) {
+                                                timestampDirectories.add(prearchiveFolderPath); // Keep track of timestamp paths, will delete these folders in case of error
+                                                log.error(String.valueOf(prearchiveFolderPath));
+                                                Files.createDirectories(prearchiveFolderPath);
+                                            }
+                                            log.error(String.valueOf(finalPathForPrearchive));
+                                            log.error(fileName);
+                                            Files.createFile(finalPathForPrearchive);
+                                            ZipEntryFileWriterWrapper zipEntryFileWriterWrapper = new ZipEntryFileWriterWrapper(zipEntry, zis);
+                                            zipEntryFileWriterWrapper.write(finalPathForPrearchive.toFile());
+                                        }
+                                        zipEntry = zis.getNextEntry();
+                                    }
+                                }
+                                if (zipEntry != null && zipEntry.isDirectory() && zipEntry.getName().contains("add")) {
+                                    log.error("additional data directory create scan and push files" + zipEntry.getName());
+                                    paths = splitPath(zipEntry.getName());
+                                    String scanName = paths[paths.length - 2];
+                                    session = paths[paths.length - 3];
+                                    subject = paths[paths.length - 4];
+                                    //Create subject session and prearchive folder to transfer data too
+                                    XnatSubjectdata lookForSubject = XnatSubjectdata.GetSubjectByProjectIdentifier(projectId, subject, user, false);
+                                    String subjectID = null;
+                                    if (lookForSubject != null) {
+                                        subjectID = createSubject(projectId, subject);
+                                    }
+                                    Path prearchiveFolderPath = createPreArchiveFolder(projectId, subject, session, scanName, timestamp, Boolean.TRUE);
+                                    createSession(projectId, subject, subjectID, session, scanName, timestamp, prearchiveFolderPath);
+
+
+                                    //go next into the folder and get the scan files and add it to the list
+                                    zipEntry = zis.getNextEntry();
+                                    //while you dont hit the next folder keep adding files to list of scan files
+                                    while (zipEntry != null && !zipEntry.isDirectory()) {
+                                        if (zipEntry.getName().contains("params")) {
+                                            log.error("params file!!" + zipEntry.getName());
+                                            log.error("Create subject" + subject);
+                                            log.error("upload Params file" + zipEntry.getName());
+                                        } else {
+                                            log.error("push additional data to subject " + subject + "push data to scan " + scanName + "push data to session " + session);
+                                            // Create file in the prearchive and write file details to the file in prearchive
+                                            String fileName = zipEntry.getName();
+                                            File f = new File(fileName);
+                                            fileName = f.getName();
+
+//                                    Path prearchiveFileWithSession = prearchiveTimestampPath.resolve(session);
+//                                    Path prearchiveFileWithScansFolder = prearchiveFileWithSession.resolve("SCANS");
+//                                    Path prearchiveFilewithScan = prearchiveFileWithScansFolder.resolve(scanName);
+                                            Path finalPathForPrearchive = prearchiveFolderPath.resolve(fileName);
+
+                                            if (Files.notExists(finalPathForPrearchive)) {
+                                                timestampDirectories.add(prearchiveFolderPath); // Keep track of timestamp paths, will delete these folders in case of error
+                                                Files.createDirectories(prearchiveFolderPath);
+                                            }
+
+                                            Files.createFile(finalPathForPrearchive);
+                                            ZipEntryFileWriterWrapper zipEntryFileWriterWrapper = new ZipEntryFileWriterWrapper(zipEntry, zis);
+                                            zipEntryFileWriterWrapper.write(finalPathForPrearchive.toFile());
+                                        }
+                                        zipEntry = zis.getNextEntry();
+                                    }
+                                }
+                                zipEntry = zis.getNextEntry();
+                            }
+                        }
                     }
+
+                    zipEntry = zis.getNextEntry();
                 }
-            } catch (IOException e) {
-                log.error("Error uploading fNIRS session.", e);
-                cleanupOnImportFailure();
-                throw new ServerException(e);
-            } catch (ServerException | ClientException e) {
-                log.error("Error uploading fNIRS session.", e);
-                cleanupOnImportFailure();
-                throw e;
+
+                zis.closeEntry();
+                } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         } else {
             ClientException e = new ClientException("Unsupported format " + format);
@@ -116,145 +306,120 @@ public class FNIRSImporter extends ImporterHandlerA {
         return Lists.newArrayList(uris);
     }
 
-    /**
-     * Each directory must contain a single fNIRS session. This method imports a single fNIRS session and saves it to the
-     * prearchive database
-     *
-     * @param ze   The ZipEntry of the directory
-     * @param zin  The ZipInputStream containing the entire submission (could be more than one session)
-     *
-     * @return ZipEntry The next ZipEntry
-     */
-    protected ZipEntry importDirectory(final String projectId, ZipEntry ze, ZipInputStream zin) throws IOException, ServerException, ClientException {
-        final String directoryName = ze.getName();
-        log.info("Importing directory: {}", directoryName);
 
+    private String createSubject(String projectId, String subjectLabel) {
+        final String subjectId;
+        try {
+            subjectId = XnatSubjectdata.CreateNewID();
+        } catch (Exception e) {
+            log.error("Unable to create subjectID for project " + projectId, e);
+            return "ERROR";
+        }
+
+        log.info("Creating subject in project {} with ID {}", projectId, subjectId);
+        final XnatSubjectdata subject = new XnatSubjectdata(user);
+        subject.setId(subjectId);
+        subject.setProject(projectId);
+        subject.setLabel(subjectLabel);
+
+        final PersistentWorkflowI workflow;
+        final EventMetaI eventMeta;
+
+        try {
+            workflow = PersistentWorkflowUtils.buildOpenWorkflow(user, XnatSubjectdata.SCHEMA_ELEMENT_NAME, subjectLabel, projectId, EventUtils.newEventInstance(EventUtils.CATEGORY.DATA, EventUtils.TYPE.PROCESS, "Auto-created for project", "Created to support archiving image session", "Creating new subject " + subjectLabel));
+            assert workflow != null;
+            workflow.setStepDescription("Creating");
+            eventMeta = workflow.buildEvent();
+        } catch (Exception e) {
+            log.error("Unable to create subject for project " + projectId, e);
+            return "ERROR";
+        }
+        try {
+            SaveItemHelper.authorizedSave(subject, user, false, false, eventMeta);
+//            XDAT.triggerXftItemEvent(subject, CREATE);
+            workflow.setStepDescription(PersistentWorkflowUtils.COMPLETE);
+            WorkflowUtils.complete(workflow, eventMeta);
+            log.info("Successfully create subject {} with ID {} in project {}", subjectLabel, subject.getId(), projectId);
+        } catch (Exception e) {
+            workflow.setStepDescription(PersistentWorkflowUtils.FAILED);
+            try {
+                WorkflowUtils.fail(workflow, eventMeta);
+            } catch (Exception ex) {
+                log.error("Unable to fail workflow for project " + projectId, ex);
+            }
+            log.error("Unable to create subject for project " + projectId, e);
+        }
+        return subjectId;
+    }
+
+    private Path createPreArchiveFolder(String projectId, String subject,String sessionLabel, String scanLabel, String atimestamp, Boolean addFolder) throws IOException {
         // Create prearchive timestamp
-        final String timestamp = PrearcUtils.makeTimestamp();
+        log.error(atimestamp.toString());
+        Path prearchiveTimestampPath = Paths.get(ArcSpecManager.GetInstance().getGlobalPrearchivePath(), projectId, atimestamp.toString());
+        String sessionFolderName = subject.trim() + "_".trim() + sessionLabel.trim();
+        Path sessionFolder = Paths.get(prearchiveTimestampPath.toString(), sessionFolderName);
+        Path prearchiveScanFolderPath = Paths.get(sessionFolder.toString(), "SCANS", scanLabel);
+        // mkdir if it doesnt exist
+        if (addFolder){
+            prearchiveScanFolderPath = Paths.get(prearchiveScanFolderPath.toString(), "Additional Data");
+        }
+        if (Files.notExists(prearchiveScanFolderPath)) {
+            Files.createDirectories(prearchiveScanFolderPath);
+        }
+        return prearchiveScanFolderPath;
+    }
 
-        // Initialize the session and session metadata
+    private void createSession(String projectId, String subjectlabel ,String subjectId, String sessionLabel, String scanLabel, String timestamp, Path prearchiveTimestampPath) throws ServerException {
         SessionData session = new SessionData();
-        Optional<String> subjectId = Optional.empty();
-        Optional<String> sessionLabel = Optional.empty();
-        Optional<String> scanLabel = Optional.empty();
-        Optional<String> uid = Optional.empty();
-        Optional<Date> scanDate = Optional.empty();
+        String sessionFolderName = subjectlabel.trim() + "_".trim() + sessionLabel.trim();
+        session.setFolderName(sessionFolderName);
+        session.setName(sessionLabel);
+        session.setProject(projectId);
+        session.setUploadDate(uploadDate);
+        session.setTimestamp(timestamp);
+        session.setStatus(PrearcUtils.PrearcStatus.RECEIVING);
+        session.setLastBuiltDate(Calendar.getInstance().getTime());
+        session.setSubject(subjectlabel);
+        session.setSource(params.get(URIManager.SOURCE));
+        session.setPreventAnon(Boolean.valueOf((String) params.get(URIManager.PREVENT_ANON)));
+        session.setPreventAutoCommit(Boolean.valueOf((String) params.get(URIManager.PREVENT_AUTO_COMMIT)));
+        session.setAutoArchive(shouldAutoArchive(projectId));
 
-        boolean analyzedClickInfoRead = false;
 
-        // Get Subject and Session labels if they've been provided
-        if (params.containsKey(URIManager.SUBJECT_ID)) {
-            subjectId = Optional.of((String) params.get(URIManager.SUBJECT_ID));
-            log.debug("Subject ID set in input/URI parameters: {}", subjectId);
-        }
+        Optional<SessionData> matchingSession = sessions.stream().filter(s -> s.getProject().equals(session.getProject()) &&
+                s.getFolderName().equals(session.getFolderName()) &&
+                s.getName().equals(session.getName()) &&
+                s.getSubject().equals(session.getSubject()) &&
+                (!s.getName().equalsIgnoreCase(UNKNOWN_SESSION_LABEL) ||
+                        !session.getName().equalsIgnoreCase(UNKNOWN_SESSION_LABEL))).findAny();
 
-        if (params.containsKey(URIManager.EXPT_LABEL)) {
-            sessionLabel = Optional.of((String) params.get(URIManager.EXPT_LABEL));
-            log.debug("Session Label set in input/URI parameters: {}", sessionLabel);
-        }
+        Path sessionFolder = Paths.get(prearchiveTimestampPath.toString(), sessionFolderName);
+//        Path scanFolder = Paths.get(sessionFolder.toString(), "SCANS", scanLabel);
 
-        // Initialize the prearchive directory
-        Path prearchiveTimestampPath = Paths.get(ArcSpecManager.GetInstance().getGlobalPrearchivePath(), projectId, timestamp);
-        Path prearchiveTempDirectoryPath = prearchiveTimestampPath.resolve(UNKNOWN_SESSION_LABEL);
-
-        // Import files to prearchive temp directory
-        ze = zin.getNextEntry();
-
-        if (ze == null || ze.isDirectory()) {
-            return ze;
-        }
-
-        // Once you've reached the next directory all the files for this session should have been imported
-        while (null != ze && !ze.isDirectory()) {
-            // Get the file name
-            String fullFileName = ze.getName();
-            String[] splitFileName = fullFileName.split("/");
-            String fileName = splitFileName[splitFileName.length - 1];
-
-            log.info("Importing file: {}", ze.getName());
-
-            // Create file in the prearchive
-            Path prearchiveFile = prearchiveTempDirectoryPath.resolve(fileName);
-
-            if (Files.notExists(prearchiveTempDirectoryPath)) {
-                timestampDirectories.add(prearchiveTimestampPath); // Keep track of timestamp paths, will delete these folders in case of error
-                Files.createDirectories(prearchiveTempDirectoryPath);
+        if (matchingSession.isPresent()) {
+//            scanFolder = Paths.get(matchingSession.get().getUrl(), "SCANS", scanLabel);
+            log.error("Session exists");
+            // No need for PrearcDatabase.addSession(), session should have already been added
+        } else {
+            session.setUrl(sessionFolder.toString());
+            try {
+                PrearcDatabase.addSession(session);
+                log.error("Added session to prearchive database. Project: {} Subject: {} Session: {} Scan: {}", projectId, subjectId, sessionLabel, scanLabel);
+            } catch (Exception e) {
+                log.error("Unable to add fNIRS session", e);
+                throw new ServerException(e);
             }
-
-            Files.createFile(prearchiveFile);
-
-            // AnalyzedClickInfo.txt is the header file and contains all session metadata
-            // Other file can be directly saved to the prearchive
-            ZipEntryFileWriterWrapper zipEntryFileWriterWrapper = new ZipEntryFileWriterWrapper(ze,zin);
-            zipEntryFileWriterWrapper.write(prearchiveFile.toFile());
-
-            ze = zin.getNextEntry();
         }
-//    if (params.containsKey("src")) {
-//        protected ZipEntry importDirectory(final String projectId, ZipEntry ze, ZipInputStream zin) throws IOException, ServerException, ClientException
-//    }
-
-//TODO: DEFINE THESEEEE USE THE JSON
-//            scanDate =
-//            scanLabel =
-//            uid =
-//            Task =
-
-            // Populate session
-            session.setFolderName(sessionLabel.orElse(UNKNOWN_SESSION_LABEL));
-            session.setName(sessionLabel.orElse(UNKNOWN_SESSION_LABEL));
-            session.setProject(projectId);
-            session.setScan_date(scanDate.orElse(null));
-            session.setUploadDate(uploadDate);
-            session.setTimestamp(timestamp);
-            session.setStatus(PrearcUtils.PrearcStatus.RECEIVING);
-            session.setLastBuiltDate(Calendar.getInstance().getTime());
-            session.setSubject(subjectId.orElse(""));
-            session.setSource(params.get(URIManager.SOURCE));
-            session.setPreventAnon(Boolean.valueOf((String) params.get(URIManager.PREVENT_ANON)));
-            session.setPreventAutoCommit(Boolean.valueOf((String) params.get(URIManager.PREVENT_AUTO_COMMIT)));
-            session.setAutoArchive(shouldAutoArchive(projectId));
-
-            if (!scanLabel.isPresent()) {
-                if (uid.isPresent()) {
-                    scanLabel = uid;
-                } else {
-                    scanLabel = Optional.of(UUID.randomUUID().toString());
-                }
-            }
-
-            Optional<SessionData> matchingSession = sessions.stream().filter(s -> s.getProject().equals(session.getProject()) &&
-                                                                                  s.getFolderName().equals(session.getFolderName()) &&
-                                                                                  s.getName().equals(session.getName()) &&
-                                                                                  s.getSubject().equals(session.getSubject()) &&
-                                                                                  (!s.getName().equalsIgnoreCase(UNKNOWN_SESSION_LABEL) ||
-                                                                                   !session.getName().equalsIgnoreCase(UNKNOWN_SESSION_LABEL))).findAny();
-
-            Path sessionFolder = Paths.get(prearchiveTimestampPath.toString(), sessionLabel.orElse(UNKNOWN_SESSION_LABEL));
-            Path scanFolder = Paths.get(sessionFolder.toString(), "SCANS", scanLabel.get());
-
-            if (matchingSession.isPresent()) {
-                scanFolder = Paths.get(matchingSession.get().getUrl(), "SCANS", scanLabel.get());
-                transferFiles(prearchiveTempDirectoryPath, scanFolder, prearchiveTimestampPath);
-                log.debug("Merging with existing session. Project: {} Subject: {} Session: {} Scan: {}", projectId, subjectId, sessionLabel, scanLabel);
-                // No need for PrearcDatabase.addSession(), session should have already been added
-            } else {
-                transferFiles(prearchiveTempDirectoryPath, scanFolder);
-                session.setUrl(sessionFolder.toString());
-
-                try {
-                    PrearcDatabase.addSession(session);
-                    log.debug("Added session to prearchive database. Project: {} Subject: {} Session: {} Scan: {}", projectId, subjectId, sessionLabel, scanLabel);
-                } catch (Exception e) {
-                    log.error("Unable to add fNIRS session", e);
-                    throw new ServerException(e);
-                }
-
-                sessions.add(session);
-                uris.add(sessionFolder.toString());
-            }
-
-        return ze;
+//        session.setUrl(sessionFolder.toString());
+//        try {
+//            PrearcDatabase.addSession(session);
+//            log.error("Added session to prearchive database. Project: {} Subject: {} Session: {} Scan: {}", projectId, subjectId, sessionLabel, scanLabel);
+//        } catch (Exception e) {
+//            log.error("Unable to add fNIRS session", e);
+//            throw new ServerException(e);
+//        }
+        sessions.add(session);
+        uris.add(sessionFolder.toString());
     }
 
     private PrearchiveCode shouldAutoArchive(final String projectId) {
@@ -286,91 +451,6 @@ public class FNIRSImporter extends ImporterHandlerA {
         return PrearchiveCode.code(arcProject.getPrearchiveCode());
     }
 
-    /**
-     * We don't know much about the fNIRS session until AnalyzedClickInfo.txt is parsed so everything is stored in a
-     * temporary session directory. This method is used to transfer files from temporary directory to a scan directory.
-     *
-     * @param temporarySessionFolder Directory used to temporary store the session
-     * @param scanFolder The scan directory to move the files to.
-     *
-     * @throws IOException If the new directory can't be created, the files can't be moved, or the temp directory
-     *                     can't be deleted.
-     */
-    private void transferFiles(Path temporarySessionFolder, Path scanFolder) throws IOException {
-        // mkdir if it doesnt exist
-        if (Files.notExists(scanFolder)) {
-            Files.createDirectories(scanFolder);
-        }
-
-        // Move each file individually
-        try (DirectoryStream<Path> tempFileStream = Files.newDirectoryStream(temporarySessionFolder)) {
-            for (Path tempFile: tempFileStream) {
-                Files.move(tempFile, scanFolder.resolve(tempFile.getFileName()));
-            }
-        }
-
-        // Delete the temporary session folder
-        Files.delete(temporarySessionFolder);
-    }
-
-    /**
-     * Transfers files from the temporary session directory to the scan directory and deletes the timestamp folder which
-     * contained the temporary session directory. Use this method when adding scans to an existing session.
-     *
-     * @param temporarySessionFolder Directory used to temporary store the session
-     * @param scanFolder The scan directory to move the files to.
-     * @param timestampFolder The parent directory of the temporary session. This directory will be deleted after
-     *                        transferring files to the scan directory.
-     *
-     * @throws IOException If the new directory can't be created, the files can't be moved, the temp directory can't be
- *                         deleted, or the timestamp directory can't be deleted.
-     */
-    private void transferFiles(Path temporarySessionFolder, Path scanFolder, Path timestampFolder) throws IOException {
-        // Transfer files
-        transferFiles(temporarySessionFolder, scanFolder);
-        // Then delete the timestamp folder
-        Files.delete(timestampFolder);
-    }
-
-    /**
-     * If something goes wrong with the import process, delete all the timestamp directories and delete sessions from
-     * the prearchive database
-     */
-    private void cleanupOnImportFailure() {
-        try {
-            for (Path timestampDirectory : timestampDirectories) {
-                FileUtils.deleteDirectory(timestampDirectory.toFile());
-            }
-
-            for (SessionData session : sessions) {
-                PrearcDatabase.deleteSession(session.getName(), session.getTimestamp(), session.getProject());
-            }
-        } catch (Exception e) {
-            log.error("Error deleting sessions from the prearchive", e);
-        }
-    }
-
-    /**
-     * Replaces whitespaces with underscores. Needed for various XNAT labels / ids.
-     *
-     * @param string String to replace whitespaces with underscores
-     *
-     * @return String with whitespaces replaced with underscores.
-     */
-    private String replaceWhitespace(String string) {
-        if (string == null) {
-            return null;
-        }
-
-        return string.replaceAll("\\s","_");
-    }
-
-    /**
-     * Send a session build request for each session in the prearchive instead of waiting for the
-     * 'Session Time Interval' to elapse. If the request can't be sent, then the time interval will kick in instead.
-     *
-     * @param sessionData The session to request a build for.
-     */
     private void sendSessionBuildRequest(SessionData sessionData) {
         try {
             final File sessionDir = PrearcUtils.getPrearcSessionDir(user, sessionData.getProject(), sessionData.getTimestamp(), sessionData.getFolderName(), false);
@@ -380,5 +460,7 @@ public class FNIRSImporter extends ImporterHandlerA {
         }
     }
 
-
+    public void setSubscriptionDeliveryEntityService(final SubscriptionDeliveryEntityService subscriptionDeliveryEntityService){
+        this.subscriptionDeliveryEntityService = subscriptionDeliveryEntityService;
+    }
 }

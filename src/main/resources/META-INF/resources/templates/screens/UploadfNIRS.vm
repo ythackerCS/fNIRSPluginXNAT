@@ -2,7 +2,7 @@
 <div>
     <h2>fNIRS Scan Imaging Uploader</h2>
 
-    <p>Upload zipped (.zip) bioluminescent imaging sessions to a specified project.</p>
+    <p>Upload zipped (.zip) set of subjects and their sessions to a specified project.</p>
 
     <form id="upload-form" name="upload-form" method="post">
 
@@ -11,6 +11,7 @@
         <section class="project-inputs">
             <select id="project" name="project" form="upload-form"  required>
                 <option value="" disabled selected>Select Project</option>
+                <option value="testFNIRS Project">testFNIRS Project</option>
             </select>
         </section>
 
@@ -61,16 +62,24 @@
     let fileEl            = document.getElementById("file");
 
     // Load projects then render project select box
-    let projects;
-    //TODO: CHANGE XNAT.plugins.fnirs.projects.getProjects() = await fetch (GET project data)
-    //await fetch(XNAT.url.csrfUrl("CHANGE URL"), { (COULD ALSO BE restURL)
-    // method: 'POST',
-    // })
-    // XNAT.plugin.fnirs.projects.getAll().then(resultSet => resultSet['ResultSet']['Result'])
-    //                                   .then(prjs => {
-    //                                       projects = prjs;
-    //                                       renderProjectSelectBox(projectEl, prjs);
-    //                                   });
+
+    let getallProjects = async function() {
+        console.debug(`getallProjects`);
+
+        let projectUrl = XNAT.url.restUrl('/data/projects');
+        projectUrl = XNAT.url.addQueryString(projectUrl, ['prearc_code=true',
+            'recent=true',
+            'owner=true',
+            'member=true',
+            'collaborator=true']);
+
+        const response = await fetch(projectUrl, {
+            method: 'GET',
+            headers: {'Content-Type': 'application/json'}
+        })
+
+        return response.json()
+    }
 
     let renderProjectSelectBox = function(selectBox, projects) {
         console.debug('renderProjectSelectBox()')
@@ -88,9 +97,10 @@
         })
     }
 
-    function evaluateProject(ele) {
+    getallProjects().then(resultSet => resultSet['ResultSet']["Result"]).then(projectsList => renderProjectSelectBox(projectEl, projectsList))
 
-    }
+
+
 
     async function submitForm() {
         console.debug('submitForm()')
@@ -127,7 +137,7 @@
 
         // Upload the zip file to the users cache
         console.debug(`Uploading ${file.name}`);
-        XNAT.ui.dialog.static.wait(`Uploading ${file.name}`,{id: "bli_upload"});
+        XNAT.ui.dialog.static.wait(`Uploading ${file.name}`,{id: "fnirs_upload"});
 
         let response = await fetch(userResourceCacheUrl, {
             method: 'PUT',
@@ -136,10 +146,10 @@
 
         if (response.ok) {
             console.debug('Upload successful');
-            XNAT.ui.dialog.close("bli_upload");
+            XNAT.ui.dialog.close("fnirs_upload");
         } else {
             console.error(`Failed to upload ${file.name}`)
-            XNAT.ui.dialog.close("bli_upload");
+            XNAT.ui.dialog.close("fnirs_upload");
             XNAT.ui.dialog.open({
                 title: 'Upload Failed',
                 content: `<div class="error">Failed to upload ${file.name}.</div>`,
@@ -161,13 +171,13 @@
 
         // Extract the zip file from the users cache
         console.debug(`Extracting ${file.name}`);
-        XNAT.ui.dialog.static.wait(`Extracting ${file.name}`,{id: "bli_extraction"});
+        XNAT.ui.dialog.static.wait(`Extracting ${file.name}`,{id: "fnirs_extraction"});
 
         response = await fetch(importServiceUrl, {method: 'POST'})
 
         if (response.ok) {
             console.debug('Extraction successful');
-            XNAT.ui.dialog.close("bli_extraction");
+            XNAT.ui.dialog.close("fnirs_extraction");
 
             XNAT.ui.dialog.open({
                 title: 'Upload/Extraction Successful',
@@ -182,7 +192,7 @@
             })
         } else {
             console.error(`Failed to extract ${file.name}`)
-            XNAT.ui.dialog.close("bli_extraction");
+            XNAT.ui.dialog.close("fnirs_extraction");
 
             response.text().then(text => {
                 // Error message is returned as html. Try to extract from the h3 tags.

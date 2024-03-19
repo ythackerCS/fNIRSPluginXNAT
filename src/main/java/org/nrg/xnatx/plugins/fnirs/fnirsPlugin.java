@@ -34,7 +34,7 @@ public class fnirsPlugin {
 
     @Bean
     public ImporterHandlerPackages pixiImporterHandlerPackages() {
-        return new ImporterHandlerPackages("org.nrg.xnatx.plugins.fnirs.bli.importer");
+        return new ImporterHandlerPackages("org.nrg.xnatx.plugins.fnirs.importer");
     }
 
 }
