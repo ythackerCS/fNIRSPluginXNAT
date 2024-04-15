@@ -9,7 +9,7 @@ plugins {
 }
 
 group "org.nrg.xnatx.plugins"
-version "0.1.0-SNAPSHOT"
+version "1.0.1"
 description "fNIRS Plugin for XNAT."
 
 repositories {

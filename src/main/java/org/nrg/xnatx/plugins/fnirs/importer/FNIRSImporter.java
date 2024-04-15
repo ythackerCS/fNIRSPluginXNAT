@@ -373,7 +373,8 @@ public class FNIRSImporter extends ImporterHandlerA {
         SessionData session = new SessionData();
         String sessionFolderName = subjectlabel.trim() + "_".trim() + sessionLabel.trim();
         session.setFolderName(sessionFolderName);
-        session.setName(sessionLabel);
+        //        session.setName(sessionLabel);
+        session.setName(sessionFolderName);
         session.setProject(projectId);
         session.setUploadDate(uploadDate);
         session.setTimestamp(timestamp);
