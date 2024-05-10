@@ -12,8 +12,8 @@ import org.nrg.xdat.turbine.modules.screens.SecureReport;
  * @author XDAT
  *
  */
-public class XDATScreen_report_fnirs_fnirsScanData extends SecureReport {
-	public static org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(XDATScreen_report_fnirs_fnirsScanData.class);
+public class XDATScreen_report_fnirs_fnirsPipelineAssessorData extends SecureReport {
+	public static org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(XDATScreen_report_fnirs_fnirsPipelineAssessorData.class);
 	/* (non-Javadoc)
 	 * @see org.nrg.xdat.turbine.modules.screens.SecureReport#finalProcessing(org.apache.turbine.util.RunData, org.apache.velocity.context.Context)
 	 */

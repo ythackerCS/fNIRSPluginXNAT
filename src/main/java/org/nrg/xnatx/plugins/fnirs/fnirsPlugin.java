@@ -3,6 +3,7 @@ package org.nrg.xnatx.plugins.fnirs;
 import lombok.extern.slf4j.Slf4j;
 import org.nrg.framework.annotations.XnatDataModel;
 import org.nrg.framework.annotations.XnatPlugin;
+import org.nrg.xdat.om.FnirsFnirspipelineassessordata;
 import org.nrg.xdat.om.FnirsFnirssessiondata;
 import org.nrg.xdat.om.FnirsFnirsscandata;
 import org.nrg.xnat.restlet.actions.importer.ImporterHandlerPackages;
@@ -21,7 +22,11 @@ import org.springframework.context.annotation.ComponentScan;
                           @XnatDataModel(value = FnirsFnirsscandata.SCHEMA_ELEMENT_NAME,
                                          singular = "fNIRS Scan",
                                          plural = "fNIRS Scans",
-                                         code = "fNIRSScan")
+                                         code = "fNIRSScan"),
+                          @XnatDataModel(value = FnirsFnirspipelineassessordata.SCHEMA_ELEMENT_NAME,
+                            singular = "Image Assessor Context",
+                            plural = "Image Assessor Contexts",
+                            code = "IAC"),
                           })
 @ComponentScan({"org.nrg.xnatx.plugins.fnirs.bli.helpers",
                 "org.nrg.xnatx.plugins.fnirs.bli.helpers.impl"

@@ -14,13 +14,13 @@ import org.nrg.xft.XFTItem;
  * @author XDAT
  *
  */
-public class XDATScreen_edit_fnirs_fnirsScanData extends org.nrg.xdat.turbine.modules.screens.EditScreenA {
-	static org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(XDATScreen_edit_fnirs_fnirsScanData.class);
+public class XDATScreen_edit_fnirs_fnirsPipelineAssessorData extends org.nrg.xnat.turbine.modules.screens.EditImageAssessorScreen {
+	static org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(XDATScreen_edit_fnirs_fnirsPipelineAssessorData.class);
 	/* (non-Javadoc)
 	 * @see org.nrg.xdat.turbine.modules.screens.EditScreenA#getElementName()
 	 */
 	public String getElementName() {
-	    return "fnirs:fnirsScanData";
+	    return "fnirs:fnirsPipelineAssessorData";
 	}
 	
 	public ItemI getEmptyItem(RunData data) throws Exception

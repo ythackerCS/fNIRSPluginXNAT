@@ -10,6 +10,7 @@
 
     <xs:element name="fnirsSession" type="fnirs:fnirsSessionData"/>
     <xs:element name="fnirsScan" type="fnirs:fnirsScanData"/>
+    <xs:element name="fnirsPipelineAssessorData" type="fnirs:fnirsPipelineAssessorData"/>
 
     <xs:complexType name="fnirsSessionData">
         <xs:annotation>
@@ -39,4 +40,44 @@
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
+
+    <xs:complexType name="fnirsPipelineAssessorData">
+        <xs:annotation>
+            <xs:documentation>The output of processing pipelines that includes jupyter notebook</xs:documentation>
+        </xs:annotation>
+        <xs:complexContent>
+            <xs:extension base="xnat:imageAssessorData">
+                <xs:sequence>
+                    <xs:element name="pipelineRun" type="xs:string" minOccurs="0">
+                        <xs:annotation>
+                            <xs:documentation>The Pipeline that was run to get the output</xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element name="pipelineRunDateTime" type="xs:dateTime" minOccurs="0">
+                        <xs:annotation>
+                            <xs:documentation>The datetime when the pipeline was run</xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element name="userThatRan" type="xs:string" minOccurs="0">
+                        <xs:annotation>
+                            <xs:documentation>The user that ran the pipeline</xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element name="scanUsed" type="xs:string" minOccurs="0">
+                        <xs:annotation>
+                            <xs:documentation>The scan on which the pipeline was run</xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element name="paramsUsed" type="xs:string" minOccurs="0">
+                        <xs:annotation>
+                            <xs:documentation>The params used for the run</xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+
+
 </xs:schema>
