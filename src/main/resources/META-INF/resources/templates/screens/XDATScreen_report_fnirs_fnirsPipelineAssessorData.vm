@@ -54,15 +54,18 @@
 ##	</div>
 ##
 	<h1>Jupyter Notebook:</h1>
-	<iframe width="1100" height="900" scrolling="auto" src=$content.getURI("data/experiments/${exptId}/assessors/${assessorId}/resources/RESULTS/files/output.html") sandbox></iframe>
+	<p>Please note this is just a jpg image of the notebook. If you would like to edit the notebook, download it using the manage files option on the right.</p>
+##	<iframe width="1100" height="900" scrolling="auto" src=$content.getURI("data/experiments/${exptId}/assessors/${assessorId}/resources/RESULTS/files/output.html") sandbox></iframe>
 ##	$html
 ##	THE FOLLOWING CODE BELOW IS OPTIONS TO INSERT THE DIRECT FIGURES IF WE DO NOT ALLOW THE OTHER OPTION OF JUST PRINTING THE HTML
+	<img src="$content.getURI("data/experiments/${exptId}/assessors/${assessorId}/resources/RESULTS/files/output.jpg")" width="1200">
 ##	#if(($!item.getStringProperty("fnirs:fnirsPipelineAssessorData/pipelineRun"))=="pre-processing")
-##		<img src="$content.getURI("data/experiments/${exptId}/assessors/${assessorId}/resources/RESULTS/files/RawData_Cap_DQC_nirs.png")" width="1000" height="975">
+##		<img src="$content.getURI("data/experiments/${exptId}/assessors/${assessorId}/resources/RESULTS/files/output.jpg")" width="1000">
 ##		<img src="$content.getURI("data/experiments/${exptId}/assessors/${assessorId}/resources/RESULTS/files/RawData_Metrics_II_nirs.png")" width="1000" height="975">
 ##		<img src="$content.getURI("data/experiments/${exptId}/assessors/${assessorId}/resources/RESULTS/files/Time_Traces_Overview_nirs.png")" width="1000" height="975">
 ##	#end
 ##	#if(($!item.getStringProperty("fnirs:fnirsPipelineAssessorData/pipelineRun"))=="full-processing")
+##		<img src="$content.getURI("data/experiments/${exptId}/assessors/${assessorId}/resources/RESULTS/files/output.jpg")" width="1000">
 ##		<img src="$content.getURI("data/experiments/${exptId}/assessors/${assessorId}/resources/RESULTS/files/RawData_Cap_DQC_nirs.png")" width="1000" height="975">
 ##		<img src="$content.getURI("data/experiments/${exptId}/assessors/${assessorId}/resources/RESULTS/files/RawData_Metrics_II_nirs.png")" width="1000" height="975">
 ##		<img src="$content.getURI("data/experiments/${exptId}/assessors/${assessorId}/resources/RESULTS/files/Time_Traces_Overview_nirs.png")" width="1000" height="975">
