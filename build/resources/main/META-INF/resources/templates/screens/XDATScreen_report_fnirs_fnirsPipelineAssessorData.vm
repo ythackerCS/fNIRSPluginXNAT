@@ -35,7 +35,6 @@
 							<TR><TD>pipelineRunDateTime</TD><TD>$!item.getProperty("fnirs:fnirsPipelineAssessorData/pipelineRunDateTime")</TD></TR>
 							<TR><TD>userThatRan</TD><TD>$!item.getStringProperty("fnirs:fnirsPipelineAssessorData/userThatRan")</TD></TR>
 							<TR><TD>scanUsed</TD><TD>$!item.getStringProperty("fnirs:fnirsPipelineAssessorData/scanUsed")</TD></TR>
-							<TR><TD>paramsUsed</TD><TD>$!item.getStringProperty("fnirs:fnirsPipelineAssessorData/paramsUsed")</TD></TR>
 						</TABLE>
 					</TD>
 					<TD valign="top" align="right">
@@ -58,7 +57,7 @@
 ##	<iframe width="1100" height="900" scrolling="auto" src=$content.getURI("data/experiments/${exptId}/assessors/${assessorId}/resources/RESULTS/files/output.html") sandbox></iframe>
 ##	$html
 ##	THE FOLLOWING CODE BELOW IS OPTIONS TO INSERT THE DIRECT FIGURES IF WE DO NOT ALLOW THE OTHER OPTION OF JUST PRINTING THE HTML
-	<img src="$content.getURI("data/experiments/${exptId}/assessors/${assessorId}/resources/RESULTS/files/output.jpg")" width="1200">
+	<img src="$content.getURI("data/experiments/${exptId}/assessors/${assessorId}/resources/RESULTS/files/images/output.jpg")" width="1200">
 ##	#if(($!item.getStringProperty("fnirs:fnirsPipelineAssessorData/pipelineRun"))=="pre-processing")
 ##		<img src="$content.getURI("data/experiments/${exptId}/assessors/${assessorId}/resources/RESULTS/files/output.jpg")" width="1000">
 ##		<img src="$content.getURI("data/experiments/${exptId}/assessors/${assessorId}/resources/RESULTS/files/RawData_Metrics_II_nirs.png")" width="1000" height="975">
