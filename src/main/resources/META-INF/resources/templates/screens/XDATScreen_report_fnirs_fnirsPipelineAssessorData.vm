@@ -13,13 +13,17 @@
 		#set ($popup = $turbineUtils.GetPassedParameter("popup", data) )
 		#set ($popup = "false")
 	#end
+
+<script type="text/javascript" src="$content.getURI("scripts/BasePopup.js")"></script>
+<script type="text/javascript" src="$content.getURI("scripts/FileViewer.js")"></script>
+
 <TABLE width="100%">
 	<TR>
 		<TD>
 			<table width="100%">
 				<TR>
 					<TD align="left" valign="middle">
-						<font face="$ui.sansSerifFonts" size="3"><b>fnirsPipelineAssessorData Details</b></font>
+						<font face="$ui.sansSerifFonts" size="3"><b>Pipeline Assessment Details</b></font>
 					</TD>
 				</TR>
 			</TABLE>
@@ -31,10 +35,10 @@
 				<TR>
 					<TD valign="top">
 						<TABLE>
-							<TR><TD>pipelineRun</TD><TD>$!item.getStringProperty("fnirs:fnirsPipelineAssessorData/pipelineRun")</TD></TR>
-							<TR><TD>pipelineRunDateTime</TD><TD>$!item.getProperty("fnirs:fnirsPipelineAssessorData/pipelineRunDateTime")</TD></TR>
-							<TR><TD>userThatRan</TD><TD>$!item.getStringProperty("fnirs:fnirsPipelineAssessorData/userThatRan")</TD></TR>
-							<TR><TD>scanUsed</TD><TD>$!item.getStringProperty("fnirs:fnirsPipelineAssessorData/scanUsed")</TD></TR>
+							<TR><TD>pipelineRun:</TD><TD>&emsp; $!item.getStringProperty("fnirs:fnirsPipelineAssessorData/pipelineRun")</TD></TR>
+							<TR><TD>pipelineRunDateTime:</TD><TD>&emsp; $!item.getProperty("fnirs:fnirsPipelineAssessorData/pipelineRunDateTime")</TD></TR>
+							<TR><TD>userThatRan:</TD><TD>&emsp; $!item.getStringProperty("fnirs:fnirsPipelineAssessorData/userThatRan")</TD></TR>
+							<TR><TD>scanUsed:</TD><TD>&emsp; $!item.getStringProperty("fnirs:fnirsPipelineAssessorData/scanUsed")</TD></TR>
 						</TABLE>
 					</TD>
 					<TD valign="top" align="right">

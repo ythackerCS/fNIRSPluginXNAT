@@ -1,6 +1,6 @@
 Manifest-Version: 1.0
 Application-Name: fNIRS-PLUGIN
-Build-Date: Wed May 15 15:25:19 CDT 2024
+Build-Date: Mon May 20 12:13:40 CDT 2024
 Build-Number: Manual
 Implementation-Version: 1.1.2
 Implementation-Sha: 8a3ea93ab1

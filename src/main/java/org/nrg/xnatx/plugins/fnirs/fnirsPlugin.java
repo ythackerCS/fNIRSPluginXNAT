@@ -14,6 +14,7 @@ import org.springframework.context.annotation.ComponentScan;
 @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
 @XnatPlugin(value = "fnirsPlugin", name = "fnirs Plugin",
             logConfigurationFile = "fnirs-logback.xml",
+            description = "Integrates the fNIRS data type into XNAT",
             dataModels = {
                           @XnatDataModel(value = FnirsFnirssessiondata.SCHEMA_ELEMENT_NAME,
                                          singular = "fNIRS Session",
