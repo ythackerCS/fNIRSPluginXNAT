@@ -25,9 +25,9 @@ import org.springframework.context.annotation.ComponentScan;
                                          plural = "fNIRS Scans",
                                          code = "fNIRSScan"),
                           @XnatDataModel(value = FnirsFnirspipelineassessordata.SCHEMA_ELEMENT_NAME,
-                            singular = "Image Assessor Context",
-                            plural = "Image Assessor Contexts",
-                            code = "IAC"),
+                            singular = "Pipeline Run Assessment",
+                            plural = "Pipeline Run Assessments",
+                            code = "PRA"),
                           })
 @ComponentScan({"org.nrg.xnatx.plugins.fnirs.bli.helpers",
                 "org.nrg.xnatx.plugins.fnirs.bli.helpers.impl"
