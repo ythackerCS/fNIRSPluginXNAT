@@ -1,6 +1,6 @@
 /*
  * GENERATED FILE
- * Created on Wed May 22 13:22:58 CDT 2024
+ * Created on Tue May 28 14:32:35 CDT 2024
  *
  */
 package org.nrg.xdat.bean;
