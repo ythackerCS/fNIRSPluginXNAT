@@ -10,7 +10,7 @@ This plugin extends XNAT so that fNIRS datasets can be uploaded, organized, view
 
 fNIRS and diffuse optical tomography (DOT) studies often require specialized data organization, preprocessing, and analysis workflows. Many existing imaging informatics systems are optimized for MRI, CT, or PET data and do not natively support fNIRS-specific acquisition structures or downstream analysis needs.
 
-This plugin helps address that gap by adding fNIRS-aware data organization to XNAT and enabling integration with containerized NeuroDOT processing workflows.
+This plugin helps address that gap by adding fNIRS-aware data organization to XNAT and enabling integration with containerized NeuroDOT processing workflows. This plugin was developed as part of OXI and supported work associated with a $5M grant-funded effort to improve fNIRS data organization, processing, and multi-site collaboration.
 
 ## Key Features
 
